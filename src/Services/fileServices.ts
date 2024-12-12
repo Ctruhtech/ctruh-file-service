@@ -343,7 +343,7 @@ export class FileService {
 
         await this.deleteBlobIfExists(
           containerClient,
-          "ffeaea32-92a3-4c8b-ab7b-1741d0e0b7eb" + "." + existingFile.fileExtension
+       existingFile.fileId + "." + existingFile.fileExtension
         );
         await this.deleteBlobIfExists(containerClient, imageUrl);
 
