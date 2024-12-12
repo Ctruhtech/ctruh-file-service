@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { FileService } from "../Services/fileServices";
 import { ObjectId } from "mongodb";
+import { BlobServiceClient } from "@azure/storage-blob";
 
 const fileService = new FileService();
 
@@ -97,7 +98,6 @@ export const removeFile = async (
 
     // Call the service method to delete the file
     const isRemoved = await fileService.deleteBlobFile(new ObjectId(id));
-    console.log("🚀 ~ isRemoved:", isRemoved)
 
     if (isRemoved) {
       // Return a success response if the file is removed
@@ -195,5 +195,35 @@ export const uploadFile = async (req, res) => {
     if (file && file.buffer) {
       file.buffer = Buffer.alloc(0);
     }
+  }
+};
+export const deleteFileByURLHandler = async (req: Request, res: Response) => {
+  try {
+    const { URLList } = req.body; // Extract the list of URLs from the request body
+
+    if (!URLList || URLList.length === 0) {
+      return res.status(400).send("URL list is empty or invalid.");
+    }
+
+    // Initialize the BlobServiceClient (use your Azure credentials here)
+    const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_BLOB_CONN_STR);
+
+    // Call the deleteBlobFileFromURL service function
+    const result = await fileService.deleteBlobFileFromURL({ URLList }, blobServiceClient);
+
+    // Return appropriate response based on the result
+    if (result.status === 200) {
+      return res.status(200).json({ message: result.message });
+    } else if (result.status === 404) {
+      return res.status(404).json({ message: result.message });
+    } else if (result.status === 409) {
+      return res.status(409).json({ message: result.message, failedList: result.failedList });
+    } else {
+      return res.status(400).json({ message: result.message });
+    }
+  } catch (error) {
+    // Handle any unexpected errors
+    console.error("Error during file deletion:", error);
+    res.status(500).send("An error occurred while deleting the file(s).");
   }
 };

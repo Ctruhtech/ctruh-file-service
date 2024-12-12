@@ -3,7 +3,10 @@ import { Readable } from "stream";
 import crypto from "crypto";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { ClientSecretCredential } from "@azure/identity";
+import {
+  ClientSecretCredential,
+  DefaultAzureCredential,
+} from "@azure/identity";
 import {
   blobContainerClient,
   blobServiceClient,
@@ -52,8 +55,6 @@ export class FileService {
 
   // Fetch file by ID
   async getFileById(id: string): Promise<any | null> {
-    console.log(`🚀 ~ FileService ~ getFileById ~ id: ${id}`);
-
     try {
       // Query the database using the ObjectId
       const file = await FileModel.findOne({ fileId: id.toString() }).exec();
@@ -120,7 +121,6 @@ export class FileService {
   }
   // Simulated database functions for file operations
   async getFileFromDatabase(id) {
-    console.log("🚀 ~ FileService ~ getFileFromDatabase ~ id:", id);
     try {
       const file = await this.getFileById(id.toString());
       return file;
@@ -231,7 +231,6 @@ export class FileService {
         blobUrl.indexOf("/", 8)
       )}`;
 
-
       // 7. Construct the blob file URL
       const blobFilePath = blobClient.url;
 
@@ -257,8 +256,6 @@ export class FileService {
           corr2DImageUrl, // Assuming this URL is provided or generated elsewhere
         };
 
-        console.log("🚀 ~ FileService ~ newFile:", newFile);
-
         // Save the new file info in the database
         await this.saveFileToDatabase(newFile);
 
@@ -275,18 +272,12 @@ export class FileService {
   // Delete the blob file and purge it from CDN
   async deleteBlobFile(id) {
     try {
-
       const existingFile = await this.getFileFromDatabase(id); // Replace with actual DB fetch
-      console.log(
-        "🚀 ~ FileService ~ deleteBlobFile ~ existingFile:",
-        existingFile
-      );
 
       if (!existingFile) {
         throw new Error(`File with ID ${id} does not exist!`);
       }
       const containerName = `user-${existingFile.userId.toString()}`; // Ensure userId is lowercase
-      console.log("🚀 ~ FileService ~ deleteBlobFile ~ containerName:", containerName)
       let containerClient;
 
       // Files in the "editor" container
@@ -300,16 +291,8 @@ export class FileService {
             existingFile.blobUrl,
             containerClient
           );
-          console.log(
-            "🚀 ~ FileService ~ deleteBlobFile ~ deleteBlobFileResult:",
-            deleteBlobFileResult
-          );
           const cdnPurgeBlobFileResult = await this.cdnPurgeAsync(
             existingFile.blobUrl
-          );
-          console.log(
-            "🚀 ~ FileService ~ deleteBlobFile ~ cdnPurgeBlobFileResult:",
-            cdnPurgeBlobFileResult
           );
 
           if (!deleteBlobFileResult || !cdnPurgeBlobFileResult) {
@@ -336,14 +319,13 @@ export class FileService {
       } else {
         // For files NOT in the "editor" container
         containerClient = blobServiceClient.getContainerClient(containerName);
-        console.log("🚀 ~ FileService ~ deleteBlobFile ~ containerClient:", containerClient)
         const imageUrl = existingFile.corr2DImageUrl
           ? existingFile.corr2DImageUrl.split("/").pop()
           : "";
 
         await this.deleteBlobIfExists(
           containerClient,
-       existingFile.fileId + "." + existingFile.fileExtension
+          existingFile.fileId + "." + existingFile.fileExtension
         );
         await this.deleteBlobIfExists(containerClient, imageUrl);
 
@@ -402,8 +384,6 @@ export class FileService {
       const tokenResponse = await credential.getToken(
         "https://management.azure.com/.default"
       );
-      console.log("🚀 ~ FileService ~ cdnPurgeAsync ~ tokenResponse:", tokenResponse)
-
       // Construct the CDN purge endpoint URL
       const endpointUrl = `https://management.azure.com/subscriptions/${SUBSCRIPTIONID}/resourceGroups/${RESOURCEGROUPNAME}/providers/Microsoft.Cdn/profiles/${PROFILENAME}/endpoints/${PROFILENAME}/purge?api-version=2023-05-01`;
 
@@ -431,22 +411,6 @@ export class FileService {
     } catch (error) {
       console.error("CDN purge failed:", error.message);
       return false; // Return false in case of failure
-    }
-  }
-
-  // Helper method to check and delete blob if exists
-  async deleteBlobIfExists(containerClient, blobName) {
-    console.log("🚀 ~ FileService ~ deleteBlobIfExists ~ containerClient:", containerClient)
-    console.log("🚀 ~ FileService ~ deleteBlobIfExists ~ blobName:", blobName)
-    try {
-      console.log("i am here");
-      const blobClient = containerClient.getBlobClient(blobName);
-
-      if (await blobClient.exists()) {
-        await blobClient.deleteIfExists();
-      }
-    } catch (error) {
-      console.error(`Error deleting blob ${blobName}:`, error.message);
     }
   }
   async uploadFileToBlobOnly(file, userId, uploadCategory) {
@@ -613,6 +577,112 @@ export class FileService {
     } catch (error) {
       console.error("File upload failed:", error.message);
       throw new Error(`File upload failed: ${error.message}`);
+    }
+  }
+
+  // Helper method to check and delete blob if exists
+  async deleteBlobIfExists(containerClient, blobName) {
+    try {
+      const blobClient = containerClient.getBlobClient(blobName);
+      if (await blobClient.exists()) {
+        console.log("it exists");
+        await blobClient.deleteIfExists();
+      }
+    } catch (error) {
+      console.error(`Error deleting blob ${blobName}:`, error.message);
+    }
+  }
+  async deleteBlobFileFromURL(urls, blobServiceClient) {
+    const failedList = [];
+
+    try {
+      if (!urls || !urls.URLList || urls.URLList.length === 0) {
+        return { status: 400, message: "Request body is empty or invalid." };
+      }
+
+      // Azure CDN and Authentication details
+      const clientId = process.env.CLIENTID;
+      const clientSecretId = process.env.CLIENTSECRETID;
+      const clientSecret = process.env.CLIENTSECRETVALUE;
+      const tenantId = process.env.TENANTID;
+      const subscriptionId = process.env.SUBSCRIPTIONID;
+      const resourceGroupName = process.env.RESOURCEGROUPNAME;
+      const profileName = process.env.PROFILENAME;
+
+      const tokenCredential = new ClientSecretCredential(
+        tenantId,
+        clientId,
+        clientSecret
+      );
+      const scope = "https://management.azure.com/.default"; // Scope for Azure Management API
+
+      // Get the access token
+      const token = await tokenCredential.getToken(scope);
+      const endpointUrl = `https://management.azure.com/subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.Cdn/profiles/${profileName}/endpoints/${profileName}/purge?api-version=2023-05-01`;
+      const client = axios.create({
+        headers: { Authorization: `Bearer ${token.token}` },
+      });
+
+      for (const url of urls.URLList) {
+        if (url) {
+          const parts = url.split("/");
+          if (parts.length < 2) {
+            return { status: 400, message: `Invalid URL format: ${url}` };
+          }
+
+          const fileName = parts[parts.length - 1];
+          const containerName = parts[parts.length - 2];
+          const containerClient =
+            blobServiceClient.getContainerClient(containerName);
+          // CDN Purging Logic
+          const blobUri = new URL(url);
+          let path = blobUri.pathname;
+
+          if (!path.startsWith("/")) {
+            path = `/${path}`;
+          }
+
+          const requestBody = {
+            contentPaths: [path],
+          };
+
+          try {
+            // Delete the blob from Azure Storage
+            const deleteBlobResponse = await this.deleteBlobIfExists(
+              containerClient,
+              url.split("/").pop()
+            );
+            // Purge from CDN
+            try {
+              const response = await client.post(endpointUrl, requestBody);
+              if (response.status !== 200) {
+                failedList.push(url);
+              }
+            } catch (error) {
+              failedList.push(url);
+            }
+          } catch (error) {
+            failedList.push(url);
+          }
+        }
+      }
+
+      if (failedList.length === 0) {
+        return { status: 200, message: "Blob(s) deleted successfully!" };
+      } else {
+        return failedList.length === urls.URLList.length
+          ? { status: 404, message: "Blob(s) not found." }
+          : {
+              status: 409,
+              message: "Conflict occurred during deletion.",
+              failedList,
+            };
+      }
+    } catch (error) {
+      return {
+        status: 400,
+        message: `Error deleting file(s): ${error.message}`,
+      };
     }
   }
 }

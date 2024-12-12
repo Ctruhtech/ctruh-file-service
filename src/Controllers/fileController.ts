@@ -54,7 +54,6 @@ export const getFileByUserId = async (
 ): Promise<void> => {
   try {
     const files = await fileService.getFileByUserId(req.params.userId);
-    console.log("🚀 ~ files:", files);
     if (files.length === 0) {
       res.status(404).send("No filefound");
     } else {
@@ -73,7 +72,6 @@ export const getSpecificFileByUserId = async (
       req.params.userId,
       req.query.fileType.toString()
     );
-    console.log("🚀 ~ files:", files);
     if (files.length === 0) {
       res.status(404).send("No filefound");
     } else {
@@ -96,7 +94,6 @@ export const uploadFileToBlobOnly = async (req, res) => {
       userId,
       uploadCategory
     );
-    console.log("🚀 ~ uploadFileToBlobOnly ~ cdnLink:", cdnLink);
     // Send success response
     res.status(200).json(cdnLink);
   } catch (error) {

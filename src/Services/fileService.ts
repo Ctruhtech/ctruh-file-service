@@ -535,8 +535,6 @@ export class FileService {
   async deleteBlobFile(id) {
     try {
       const existingFile = await this.getFileFromDatabase(id); // Replace with actual DB fetch
-      console.log("🚀 ~ FileService ~ deleteBlobFile ~ existingFile:", existingFile)
-
       if (!existingFile) {
         throw new Error(`File with ID ${id} does not exist!`);
       }
@@ -554,11 +552,9 @@ export class FileService {
             existingFile.bloburl,
             containerClient
           );
-          console.log("🚀 ~ FileService ~ deleteBlobFile ~ deleteBlobFileResult:", deleteBlobFileResult)
           const cdnPurgeBlobFileResult = await this.cdnPurgeAsync(
             existingFile.bloburl
           );
-          console.log("🚀 ~ FileService ~ deleteBlobFile ~ cdnPurgeBlobFileResult:", cdnPurgeBlobFileResult)
 
           if (!deleteBlobFileResult || !cdnPurgeBlobFileResult) {
             throw new Error("GLTF file Blob deletion or CDN purge failed");
