@@ -275,6 +275,7 @@ export class FileService {
   // Delete the blob file and purge it from CDN
   async deleteBlobFile(id) {
     try {
+
       const existingFile = await this.getFileFromDatabase(id); // Replace with actual DB fetch
       console.log(
         "🚀 ~ FileService ~ deleteBlobFile ~ existingFile:",
@@ -284,8 +285,7 @@ export class FileService {
       if (!existingFile) {
         throw new Error(`File with ID ${id} does not exist!`);
       }
-
-      const containerName = existingFile.blobId; // or username
+      const containerName = `user-${existingFile.userId.toString()}`; // Ensure userId is lowercase
       console.log("🚀 ~ FileService ~ deleteBlobFile ~ containerName:", containerName)
       let containerClient;
 
@@ -294,6 +294,7 @@ export class FileService {
         containerClient = blobServiceClient.getContainerClient(containerName);
 
         if (existingFile.blobUrl) {
+          console.log(" andar hu bahi");
           // Delete the main blob and handle failure
           const deleteBlobFileResult = await this.deleteBlobFileAsync(
             existingFile.blobUrl,
@@ -342,11 +343,11 @@ export class FileService {
 
         await this.deleteBlobIfExists(
           containerClient,
-          existingFile.id + "." + existingFile.fileextension
+          "ffeaea32-92a3-4c8b-ab7b-1741d0e0b7eb" + "." + existingFile.fileExtension
         );
         await this.deleteBlobIfExists(containerClient, imageUrl);
 
-        await this.removeFileFromDatabase(existingFile); // Replace with actual DB remove logic
+        await this.removeFileFromDatabase(existingFile.fileId); // Replace with actual DB remove logic
       }
 
       return "Blob deleted and purged successfully!";
@@ -435,6 +436,8 @@ export class FileService {
 
   // Helper method to check and delete blob if exists
   async deleteBlobIfExists(containerClient, blobName) {
+    console.log("🚀 ~ FileService ~ deleteBlobIfExists ~ containerClient:", containerClient)
+    console.log("🚀 ~ FileService ~ deleteBlobIfExists ~ blobName:", blobName)
     try {
       console.log("i am here");
       const blobClient = containerClient.getBlobClient(blobName);

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { FileService } from "../Services/fileServices";
+import { ObjectId } from "mongodb";
 
 const fileService = new FileService();
 
@@ -95,7 +96,7 @@ export const removeFile = async (
     const { id } = req.params; // Get the file ID from the request parameters
 
     // Call the service method to delete the file
-    const isRemoved = await fileService.deleteBlobFile(id);
+    const isRemoved = await fileService.deleteBlobFile(new ObjectId(id));
     console.log("🚀 ~ isRemoved:", isRemoved)
 
     if (isRemoved) {
