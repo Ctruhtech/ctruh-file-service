@@ -168,12 +168,12 @@ export const uploadFile = async (req, res) => {
     subCategory,
     subType,
     uploadCategory,
-    blobId
+    blobId,
   } = nonFileParams;
 
   try {
     const uploadDetails = await fileService.uploadFile(
-      file, 
+      file,
       fileName,
       fileType,
       isCompressed,
@@ -206,10 +206,15 @@ export const deleteFileByURLHandler = async (req: Request, res: Response) => {
     }
 
     // Initialize the BlobServiceClient (use your Azure credentials here)
-    const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_BLOB_CONN_STR);
+    const blobServiceClient = BlobServiceClient.fromConnectionString(
+      process.env.AZURE_BLOB_CONN_STR
+    );
 
     // Call the deleteBlobFileFromURL service function
-    const result = await fileService.deleteBlobFileFromURL({ URLList }, blobServiceClient);
+    const result = await fileService.deleteBlobFileFromURL(
+      { URLList },
+      blobServiceClient
+    );
 
     // Return appropriate response based on the result
     if (result.status === 200) {
@@ -217,7 +222,9 @@ export const deleteFileByURLHandler = async (req: Request, res: Response) => {
     } else if (result.status === 404) {
       return res.status(404).json({ message: result.message });
     } else if (result.status === 409) {
-      return res.status(409).json({ message: result.message, failedList: result.failedList });
+      return res
+        .status(409)
+        .json({ message: result.message, failedList: result.failedList });
     } else {
       return res.status(400).json({ message: result.message });
     }
@@ -225,5 +232,51 @@ export const deleteFileByURLHandler = async (req: Request, res: Response) => {
     // Handle any unexpected errors
     console.error("Error during file deletion:", error);
     res.status(500).send("An error occurred while deleting the file(s).");
+  }
+};
+export const saveFileByUrl = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // Extract file details from the request body
+    const {
+      fileUrl,
+      fileName,
+      fileType,
+      isCompressed,
+      userId,
+      corr2DImageUrl,
+      category,
+      subCategory,
+      subType,
+      uploadCategory,
+      blobId,
+    } = req.body;
+
+    // Call the service to save the file
+    const result = await fileService.saveFileByUrl(
+      fileUrl,
+      fileName,
+      fileType,
+      isCompressed,
+      userId,
+      corr2DImageUrl,
+      category,
+      subCategory,
+      subType,
+      uploadCategory,
+      blobId
+    );
+
+    // Send the response based on the result
+    if (result.created) {
+      res.status(201).json(result.file);
+    } else {
+      res.status(200).json(result.file); // File already exists
+    }
+  } catch (error) {
+    // Handle errors and send failure response
+    res.status(400).send(`Error: ${error.message}: File upload failed`);
   }
 };

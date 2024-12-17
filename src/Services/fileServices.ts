@@ -16,6 +16,7 @@ import { BlobServiceClient } from "@azure/storage-blob";
 import dotenv from "dotenv";
 import { Types } from "mongoose";
 import { ObjectId } from "mongodb";
+import mongoose from "mongoose";
 dotenv.config();
 
 export class FileService {
@@ -683,6 +684,59 @@ export class FileService {
         status: 400,
         message: `Error deleting file(s): ${error.message}`,
       };
+    }
+  }
+  async saveFileByUrl(
+    fileUrl,
+    fileName,
+    fileType,
+    isCompressed,
+    userId,
+    corr2DImageUrl,
+    category,
+    subCategory,
+    subType,
+    uploadCategory,
+    blobId
+  ) {
+    try {
+      // Generate a new GUID (ObjectId in MongoDB)
+      const newGuid = uuidv4(); // Generate a GUID for the file name
+      const extension = fileName.substring(fileName.lastIndexOf(".") + 1);
+      const systemFileName = newGuid.toString() + "." + extension;
+
+      // Check if the file already exists by GUID
+      let file = await FileModel.findOne({ fileId: newGuid.toString() });
+
+      if (!file) {
+        // Create a new file record if it doesn't exist
+        file = new FileModel({
+          fileId: newGuid.toString(),
+          userId,
+          fileName,
+          fileExtension: extension,
+          blobUrl: fileUrl,
+          isCompressed,
+          corr2DImageUrl,
+          type: fileType,
+          uploadCategory,
+          blobId,
+          category,
+          subCategory,
+          subType
+        });
+
+        // Save the file to the database
+        await file.save();
+
+        // Return the result with 'created' flag
+        return { created: true, file };
+      } else {
+        // If file already exists, return it
+        return { created: false, file };
+      }
+    } catch (error) {
+      throw new Error(`Error in saveFileByUrl: ${error.message}`);
     }
   }
 }

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 
-import { deleteFileByURLHandler, getAllFiles, getAllSystemFiles, getFileById, getFileByUserId, getSpecificFileByUserId, removeFile, uploadFile, uploadFileFromExternalURL, uploadFilesToBlobOnly } from "../Controllers/fileControllers";
+import { deleteFileByURLHandler, getAllFiles, getAllSystemFiles, getFileById, getFileByUserId, getSpecificFileByUserId, removeFile, saveFileByUrl, uploadFile, uploadFileFromExternalURL, uploadFilesToBlobOnly } from "../Controllers/fileControllers";
 
 const fileRouter = Router();
 const upload = multer();
@@ -17,6 +17,7 @@ fileRouter.get("/getSpecificFileByUserId/:userId", getSpecificFileByUserId);
 fileRouter.post("/uploadFileToBlobOnly", upload.single("file"), uploadFilesToBlobOnly);
 fileRouter.post("/uploadFileFromExternalURL",  uploadFileFromExternalURL);
 fileRouter.post("/uploadFile", upload.single("file"), uploadFile);
+fileRouter.post("/saveFileByUrl",saveFileByUrl); 
 
 export default fileRouter;
   
