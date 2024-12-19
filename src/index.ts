@@ -26,7 +26,7 @@ app.get("/health", async (req, res, next) => {
   }
 });
 mongoose
-  .connect("mongodb://localhost:27017/filedb")
+  .connect("mongodb://localhost:27017/editorDb")
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.log("MongoDB connection error:", err));
 app.use("/api/File", fileRouter);
