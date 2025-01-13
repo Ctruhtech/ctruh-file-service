@@ -28,7 +28,7 @@ export const postCustomAudioHandler = async (req, res) => {
     const blobUrl = await uploadFileToBlob(userId, file);
 
     // Step 2: Create a new CustomAudio entry with the uploaded file's URL
-    const newCustomAudio = await postCustomAudio( new ObjectId(userId), title, blobUrl, duration, category, tagList);
+    const newCustomAudio = await postCustomAudio(userId, title, blobUrl, duration, category, tagList);
 
     // Step 3: Send response with the new CustomAudio object
     res.status(201).json(newCustomAudio);

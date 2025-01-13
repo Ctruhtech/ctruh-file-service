@@ -24,7 +24,10 @@ export class FileService {
   async getAllFiles(): Promise<any[]> {
     try {
       // Mongoose query to fetch all documents (logins) from the "File" collection
-      const files = await FileModel.find().exec();
+      const files = await FileModel.find({ uploadCategory: "system-defined" })
+      .sort({ sequence: 1 })
+      .select("id filename fileextension type isCompressed category subcategory subtype uploadCategory bloburl blobId corr2DImageUrl userid")
+      .exec();
 
       if (files.length === 0) {
         return [];
