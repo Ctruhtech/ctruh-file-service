@@ -1,38 +1,47 @@
 // src/index.ts
 import express from "express";
-import cors from "cors";
-import fileRouter from "./Routers/fileRouter";
 import mongoose from "mongoose";
-import customAudioRouter from "./Routers/customAudioRouter";
+import { APP_PORT, MONGODB_DB, MONGODB_URI } from "./config";
+import { appInitializationLogs, getHomePageHTML } from "./lib/helpers/app.helper";
+import logger from "./logger/logger";
+import { setupMetrics } from "./metrics";
+import { addAppMetaHeaders } from "./middlewares/appMeta.middleware";
+import customAudioRouter from "./routers/customAudioRouter";
+import fileRouter from "./routers/fileRouter";
 
 // Enable dotenv if you're using environment variables
 
-
 const app = express();
-const PORT = process.env.PORT || 9000;
+const PORT = APP_PORT || 9003;
 
-app.use(cors()); // Enable CORS with default settings
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+//Add app meta headers X-MS-Name and X-MS-Version
+app.use(addAppMetaHeaders);
 
-app.get("/health", async (req, res, next) => {
-  try {
-    res.send("I am running fine");
-  } catch (err) {
-    next(err); // Passes the error to the error handling middleware
-  }
-});
+// Setup service metrics
+setupMetrics(app);
+
+app.get("/", (req, res) => res.send(getHomePageHTML()));
 mongoose
-  .connect("mongodb://localhost:27017/editorDb")
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.log("MongoDB connection error:", err));
+    .connect(MONGODB_URI, {
+        dbName: MONGODB_DB,
+    })
+    .then(() => console.log("Connected to MongoDB"))
+    .catch(err => console.log("MongoDB connection error:", err));
 app.use("/api/File", fileRouter);
 app.use("/api/customAudio", customAudioRouter);
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+    appInitializationLogs(PORT);
+});
+
+process.on("uncaughtException", (error: Error) => {
+    logger.error("An uncaughtException : ", error);
+});
+
+process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
+    const error = reason instanceof Error ? reason : new Error(JSON.stringify(reason));
+    throw error;
 });

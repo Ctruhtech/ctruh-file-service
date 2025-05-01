@@ -1,3 +1,7 @@
-dist
 node_modules
+dist
 .env
+.vscode
+cleanup.*
+.env.*
+version-info.txt
